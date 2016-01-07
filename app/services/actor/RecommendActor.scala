@@ -23,19 +23,19 @@ class RecommendActor extends Actor with ActorLogging {
 
   def receive = {
     case QueryOryx(matches, priorities) =>
-      Future(queryOryx(matches, priorities)) onComplete {
-        case Success(rows) =>
-          if(rows != noRows)  {
-            logActor ! Warn(s"$name: QueryOryx: no rows set to pushActor")
-            pushActor ! SetToHBase(rows)
-            pushActor ! SetToActiveMQ(rows)
-          }
-
-        case Failure(ex) =>
-          logActor ! Err(s"$name: QueryOryx: $ex")
+    Future(queryOryx(matches, priorities)) onComplete {
+      case Success(rows) =>
+      if(rows != noRows)  {
+        logActor ! Warn(s"$name: QueryOryx: no rows set to pushActor")
+        pushActor ! SetToHBase(rows)
+        pushActor ! SetToActiveMQ(rows)
       }
 
-      self ! QueryOryx(matches, priorities)
+      case Failure(ex) =>
+      logActor ! Err(s"$name: QueryOryx: $ex")
+    }
+
+    self ! QueryOryx(matches, priorities)
   }
 }
 
@@ -55,6 +55,9 @@ object RecommendActor {
         val tprioritie = qav.get("Prioritie").get.toInt
         if (mprioritie > tprioritie) {
           val family = rowPull.family
+          /**
+          * what if there's no relevant items and tags of this user
+          */
           val items = ServingLayer.getItemsByUid(uid, "10")
           val tags = ServingLayer.getTagsByUid(uid, "10")
           val qualifersAndValues = muMap[String, String]()
