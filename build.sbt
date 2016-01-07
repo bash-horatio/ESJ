@@ -1,9 +1,23 @@
 name := "ESJ" //Email Scene Judge
 version := "0.1"
 
+// scala compile options
+//"-unchecked", "-deprecation", "-encoding", "utf8" and so on
 scalaVersion := "2.10.5"
-//ivyScala := ivyScala.value map { _.copy(overrideScalaVersion = false) }
+scalacOptions := Seq("-feature")
+ivyScala := ivyScala.value map { _.copy(overrideScalaVersion = false) }
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
+
+// disable documentation generation
+sources in (Compile, doc) := Seq.empty
+publishArtifact in (Compile, packageDoc) := false
+
+// ivy log level: Quiet, DownloadOnly, FULL
+//ivyLoggingLevel := UpdateLogging.Quiet
+
+// parallel execution in test
+parallelExecution in Test := true
+fork in Test := false
 
 libraryDependencies ++= Seq(
   "com.googlecode.xmemcached" % "xmemcached" % "2.0.0",
