@@ -1,0 +1,1 @@
+//-Dpidfile.path=/var/run/play2-${{app_name}}.pid
