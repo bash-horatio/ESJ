@@ -1,5 +1,10 @@
+// import com.typesafe.sbt.SbtNativePackager._
+// import NativePackagerKeys._
+// packageArchetype.java_server
+
 name := "ESJ" //Email Scene Judge
-version := "0.1"
+version := "0.2"
+
 
 // scala compile options
 //"-unchecked", "-deprecation", "-encoding", "utf8" and so on
@@ -34,4 +39,4 @@ libraryDependencies ++= Seq(
 //  "org.apache.hbase" % "hbase-common" % "1.1.1",
 //  "org.apache.hbase" % "hbase-server" % "1.1.1"
 )
-//doc in Compile <<= target.map(_ / "none")
+doc in Compile <<= target.map(_ / "none")
