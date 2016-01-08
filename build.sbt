@@ -24,19 +24,26 @@ publishArtifact in (Compile, packageDoc) := false
 parallelExecution in Test := true
 fork in Test := false
 
-libraryDependencies ++= Seq(
-  "com.googlecode.xmemcached" % "xmemcached" % "2.0.0",
-  "org.hbase" % "asynchbase" % "1.7.0",
-  "org.fusesource.stomp" % "scomp" % "1.0.0"
-//  "org.apache.hadoop" % "hadoop-core" % "0.20.205.0",
-//  "org.apache.hbase" % "hbase" % "0.90.4"
-//  jdbc,
-//  ws,
-//  "com.typesafe.slick" % "slick_2.10" % "2.1.0",
-//  "org.apache.hadoop" % "hadoop-hdfs" % "2.4.1",
-//  "org.apache.hadoop" % "hadoop-common" % "2.4.1",
-//  "org.apache.hbase" % "hbase-client" % "1.1.1",
-//  "org.apache.hbase" % "hbase-common" % "1.1.1",
-//  "org.apache.hbase" % "hbase-server" % "1.1.1"
-)
+libraryDependencies ++= {
+  val akkaVersion = "2.3.4"
+  Seq(
+    "com.typesafe.akka" %% "akka-actor" % akkaVersion,
+    "com.typesafe.akka" %% "akka-testkit" % akkaVersion,
+    "org.scalatest" %% "scalatest" % "2.2.0",
+
+    "com.googlecode.xmemcached" % "xmemcached" % "2.0.0",
+    "org.hbase" % "asynchbase" % "1.7.0",
+    "org.fusesource.stomp" % "scomp" % "1.0.0"
+    //  "org.apache.hadoop" % "hadoop-core" % "0.20.205.0",
+    //  "org.apache.hbase" % "hbase" % "0.90.4"
+    //  jdbc,
+    //  ws,
+    //  "com.typesafe.slick" % "slick_2.10" % "2.1.0",
+    //  "org.apache.hadoop" % "hadoop-hdfs" % "2.4.1",
+    //  "org.apache.hadoop" % "hadoop-common" % "2.4.1",
+    //  "org.apache.hbase" % "hbase-client" % "1.1.1",
+    //  "org.apache.hbase" % "hbase-common" % "1.1.1",
+    //  "org.apache.hbase" % "hbase-server" % "1.1.1"
+  )
+}
 doc in Compile <<= target.map(_ / "none")

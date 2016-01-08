@@ -1,15 +1,28 @@
 package services.actor
 
-import akka.actor.{ActorLogging, Actor}
+import akka.actor.{Actor, ActorLogging}
+import akka.event.Logging._
 import common.LogHelper.LogHelper
-import services.actor.LogActor.{Info, Err, Warn}
+import services.actor.LogActor.{Err, Info, Warn}
 
 import scala.collection.mutable.ListBuffer
 
 /**
  * Created by horatio on 10/28/15.
  */
-class LogActor(size: Int) extends Actor with ActorLogging {
+
+
+class LogActor extends Actor {
+  def receive = {
+    case InitializeLogger(_)                        => sender() ! LoggerInitialized
+    case Error(cause, logSource, logClass, message) =>
+    case Warning(logSource, logClass, message)      =>
+    case Debug(logSource, logClass, message)        =>
+  }
+}
+
+
+class OldLogActor(size: Int) extends Actor with ActorLogging {
 
   val name = context.self.path.toString.split("/").last
   val errBuffer = ListBuffer[String]()

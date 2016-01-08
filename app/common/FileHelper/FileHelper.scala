@@ -28,6 +28,96 @@ import scala.io.Source
 
 
 object FileHelper {
+
+	/**
+	 * 将内容存储到文件中，如果文件存在，将被覆盖
+	 * 如果文件不存在，会创建文件
+	 * 如果父目录不存在，会发生异常
+	 * @param fileName 文件名字
+	 * @param content 要写入的文件内容
+	 * @return
+	 */
+	def save(fileName: String, content: String): Boolean = {
+		var status = false
+		var printer: PrintWriter = null
+
+		try {
+			printer = new PrintWriter(new File(fileName))
+			printer.print(content)
+			status = true
+		} catch {
+			case ex: Exception =>
+				//BDCError.logError(ex.getStackTraceString)
+				status = false
+		} finally {
+			if (printer != null) printer.close()
+		}
+
+		status
+	}
+
+	/**
+	 * 将数据存储到文件
+	 * 当apend为true时，追加内容到文件中
+	 * 如果需要换行，需要在每个content元素的尾部加入'\n'
+	 * @param fileName 文件名字
+	 * @param contents 内容
+	 * @param append 是否追加
+	 * @return
+	 */
+	def save(fileName: String, contents: TraversableOnce[String], append: Boolean = false): Boolean = {
+		var status = false
+		var fos: FileOutputStream = null
+		var bos: BufferedOutputStream = null
+
+		try {
+			fos = new FileOutputStream(fileName, append)
+			bos = new BufferedOutputStream(fos)
+
+			contents foreach { content =>
+				bos.write(content.getBytes())
+			}
+
+			bos.flush()
+			status = true
+		} catch {
+			case ex: Exception =>
+				//BDCError.logError(ex.getStackTraceString)
+				status = false
+		} finally {
+			if (bos != null) bos.close()
+			if (fos != null) fos.close()
+		}
+
+		status
+	}
+
+	/**
+	 * 追加文件
+	 * @param fileName 文件名字
+	 * @param content 追加内容
+	 * @return
+	 */
+	def append(fileName: String, content: String): Boolean = {
+		var out: FileWriter = null
+		var status = false
+
+		try {
+			out = new FileWriter(fileName, true)
+			out.write(content)
+			status = true
+		} catch {
+			case ex: Exception =>
+				//BDCError.logError(ex.getStackTraceString)
+				status = false
+		} finally {
+			if (out != null) out.close()
+		}
+
+		status
+	}
+
+
 	/* clean file context, the file context will be void */
 	def cleanFile(file: String): Boolean = {
 		try {

@@ -1,5 +1,8 @@
+import Boot.Init
 import akka.actor._
 import com.typesafe.config.ConfigFactory
+import common.Async.Logger
+import common.Async.Logger.Debug
 import common.ConfHelper.ConfigHelper
 import common.FileHelper.FileHelper
 import common.FqueueHelper.FqueueHelper
@@ -12,7 +15,6 @@ import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
 object ESJ extends App {
-  import Boot.Init
 
   val dynConfig = ConfigHelper.getConf()
   val queue = dynConfig.getString("Actor.Boot.Fqueue")
@@ -23,12 +25,25 @@ object ESJ extends App {
   val sysName = dynConfig.getString("App.Name")
 
   val config = ConfigFactory.load()
-  implicit val system = ActorSystem(sysName, config.getConfig("AkkaConfig"))
+//  implicit val system = ActorSystem(sysName, config.getConfig("AkkaConfig"))
+  implicit val system = ActorSystem(sysName)
   val boot = system.actorOf(Props[Boot], "BootActor")
+
   boot ! Init
 }
 
+
 class Boot extends Actor with ActorLogging {
+
+  val name = context.self.path.toString.split("/").last
+  def receive = {
+    case Init => Logger.debug(Debug(name, self.getClass, "System booted"))
+
+  }
+}
+
+
+class OldBoot extends Actor with ActorLogging {
   import Boot._
   import ESJ._
   import services.actor.LogActor.{Err, Info}

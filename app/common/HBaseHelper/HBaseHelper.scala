@@ -9,6 +9,8 @@ import com.stumbleupon.async.Callback
 import org.hbase.async._
 
 import scala.collection.parallel.immutable.ParMap
+import scala.language.implicitConversions
+import scala.language.postfixOps
 
 
 /**
