@@ -1,56 +1,70 @@
 package common.Log
 
-import java.io.{BufferedOutputStream, FileOutputStream, FileWriter
+import java.io.{BufferedOutputStream, FileOutputStream}
 
-import akka.event.Logging.{InitializeLogger, LoggerInitialized}
-import akka.actor.Actor
+import akka.actor._
 import common.ConfHelper.ConfigHelper
 import common.Log.LogLevel._
+
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.language.postfixOps
-import scala.util.control.NoStackTrace
 
 /**
- * Created by horatio on 1/8/16.
+ * Log Actor to receive log events.
+ * Capable to transform into Akka Event Stream Listener
+ *
  */
 class LogActor extends Actor with Logger {
+  import akka.event.Logging.{InitializeLogger, LoggerInitialized}
 
+  import scala.language.postfixOps
+
+  /**
+   * create a schedule to flush and clear regularly before receiving message
+   */
   override def preStart() = {
     val dynConfig = ConfigHelper.getConf()
-    val flashInterval = dynConfig.getString("Log.Actor.FlashInterval").toInt
+    val flushInterval = dynConfig.getString("Log.Actor.FlushInterval").toInt
     val startDelay = dynConfig.getString("Log.Actor.StartDelay").toInt
-    context.system.scheduler.schedule(startDelay minutes, flashInterval seconds, self, Flash(self.getClass, "flash to File and clear Log Buffer regularly"))
+    context.system.scheduler.schedule(startDelay minutes, flushInterval seconds, self, Flush(self.getClass, "flush to File and clear Log Buffer regularly"))
   }
 
-  override def receive: Receive = {
+  /**
+   * override de default supervisor strategy to send Error message
+   */
+//  override val supervisorStrategy=OneForOneStrategy() {
+//    case ex: ActorInitializationException =>
+//      classify(Error(self.getClass, "failed to init", ex))
+//      Stop
+//    case ex: ActorKilledException =>
+//      classify(Error(self.getClass, "be killed", ex))
+//      Stop
+//    case ex: DeathPactException =>
+//      classify(Error(self.getClass, "death pact", ex))
+//      Stop
+//    case ex: Exception =>
+//      classify(Error(self.getClass, "exception", ex))
+//      Restart
+//  }
+
+  override def receive: Actor.Receive = {
+    case event: LogEvent => classify(event)
+
+    /**
+     * response to InitializeLogger(_) when registering this LogActor to EventStream Listener
+     */
     case InitializeLogger(_) => sender() ! LoggerInitialized
-    case event: LogEvent => apply(event)
   }
 }
 
 trait Logger {
   import Logger._
+
   /**
-   * flash Log Buffer to File
+   * flush Log Buffer to File
    */
-  private def flashToFile(logFile: String, bufferContent: String) = {
-    var out: FileWriter = null
-    var status = false
-    try {
-      out = new FileWriter(logFile, true)
-      out.write(bufferContent)
-    } catch {
-      case ex: Exception =>
-
-        status = false
-    } finally {
-      if (out != null) out.close()
-    }
-  }
-
-  private def flashToFile(logFile: String, bufferContent: ArrayBuffer[String]) = {
+  private def flushToFile(logFile: String, bufferContent: ArrayBuffer[String]) = {
     val append = true
     var fos: FileOutputStream = null
     var bos: BufferedOutputStream = null
@@ -62,7 +76,7 @@ trait Logger {
       }
       bos.flush()
     } catch {
-      case ex: Exception => this.apply(Error(ex, this.getClass, "failed"))
+      case ex: Exception => this.classify(Error(this.getClass, "failed", ex))
     } finally {
       if (bos != null) bos.close()
       if (fos != null) fos.close()
@@ -78,14 +92,14 @@ trait Logger {
           e.message, stackTraceFor(e.cause))
         errorBuffer += logMessage + "\n"
 
-      case e: Flash =>
+      case e: Flush =>
         val logMessage = logFormat.format(e.level, formatTime(e), event.logClass,
         e.message)
         errorBuffer += logMessage + "\n"
     }
 
-    if (event.flashFlag || errorBuffer.size >= lowThreshold) {
-      flashToFile(errorLogFile, errorBuffer)
+    if (event.flushFlag || errorBuffer.size >= lowThreshold) {
+      flushToFile(errorLogFile, errorBuffer)
       errorBuffer.clear()
     }
   }
@@ -93,8 +107,8 @@ trait Logger {
   private def warning(event: LogEvent) = {
     val logContent = logFormat.format(event.level, formatTime(event), event.logClass, event.message)
     warningBuffer += logContent + "\n"
-    if (event.flashFlag || warningBuffer.size >= lowThreshold) {
-      flashToFile(warningLogFile, warningBuffer)
+    if (event.flushFlag || warningBuffer.size >= lowThreshold) {
+      flushToFile(warningLogFile, warningBuffer)
       warningBuffer.clear()
     }
   }
@@ -102,8 +116,8 @@ trait Logger {
   private def info(event: LogEvent) = {
     val logContent = logFormat.format(event.level, formatTime(event), event.logClass, event.message)
     infoBuffer += logContent + "\n"
-    if (event.flashFlag || infoBuffer.size >= highThreshold) {
-      flashToFile(infoLogFile, infoBuffer)
+    if (event.flushFlag || infoBuffer.size >= highThreshold) {
+      flushToFile(infoLogFile, infoBuffer)
       infoBuffer.clear()
     }
 
@@ -112,28 +126,28 @@ trait Logger {
   private def debug(event: LogEvent) = {
     val logContent = logFormat.format(event.level, formatTime(event), event.logClass, event.message)
     debugBuffer += logContent + "\n"
-    if (event.flashFlag || debugBuffer.size >= highThreshold) {
-      flashToFile(debugLogFile, debugBuffer)
+    if (event.flushFlag || debugBuffer.size >= highThreshold) {
+      flushToFile(debugLogFile, debugBuffer)
       debugBuffer.clear()
     }
 
   }
 
-  private def flash(event: LogEvent): Unit = {
-    val flash = Flash(event.logClass, event.message)
-    this.error(flash)
-    this.warning(flash)
-    this.info(flash)
-    this.debug(flash)
+  private def flush(event: LogEvent): Unit = {
+    val flush = Flush(event.logClass, event.message)
+    this.error(flush)
+    this.warning(flush)
+    this.info(flush)
+    this.debug(flush)
   }
 
-  def apply(event: LogEvent): Unit = event match {
-    case e: Flash => this.flash(e)
+  def classify(event: LogEvent): Unit = event match {
+    case e: Flush => this.flush(e)
     case e: Error => this.error(e)
     case e: Warning => this.warning(e)
     case e: Info => this.info(e)
     case e: Debug => this.debug(e)
-    case e => this.apply(Warning(this.getClass, s"received unexpected event of class: $e"))
+    case e => this.classify(Warning(this.getClass, s"received unexpected event of class: $e"))
   }
 
 }
@@ -143,15 +157,25 @@ object Logger {
   import java.text.SimpleDateFormat
   import java.util.Date
 
+  import scala.util.control.NoStackTrace
+
+  /**
+   * different formats of Log Content, only Error level has Cause(stack trace)
+   */
   private val date = new Date()
-  private val dateFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss")
   private val logFormat = "[%s] [%s] [%s] %s"
   private val logFormatWithCause = "[%s] [%s] [%s] %s %s"
-
+  
+  /**
+   * different formats of system time bug SimpleDateFormat library isn't threadsafe
+   * @param event
+   * @return
+   */
   private def formatTime(event: LogEvent): String = synchronized {
     date.setTime(event.timestamp)
+    val dateFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss")
     dateFormat.format(date)
-  } // SDF isn't threadsafe
+  }
 
   private def formatTime(timestamp: Long): String = synchronized {
     date.setTime(timestamp)
@@ -173,8 +197,10 @@ object Logger {
       sw.toString
   }
 
-
-  val dynConfig = ConfigHelper.getConf()
+  /**
+   * get Log File name from ./DynConfig/dynamic.conf
+   */
+  private val dynConfig = ConfigHelper.getConf()
   private val logFileDir = dynConfig.getString("Log.File.Directory")
   private val logTimeStamp = formatTime(System.currentTimeMillis)
   private val errorLogFile = s"$logFileDir/error-$logTimeStamp"
@@ -182,6 +208,9 @@ object Logger {
   private val infoLogFile = s"$logFileDir/info-$logTimeStamp"
   private val debugLogFile = s"$logFileDir/debug-$logTimeStamp"
 
+  /**
+   * Log Buffer initialization
+   */
   private val highThreshold = dynConfig.getString("Log.Buffer.HighThreshold").toInt
   private val lowThreshold = dynConfig.getString("Log.Buffer.LowThreshold").toInt
   private val errorBuffer = ArrayBuffer[String]()

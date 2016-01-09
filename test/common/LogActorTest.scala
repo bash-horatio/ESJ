@@ -1,12 +1,10 @@
 package common
 
 import akka.actor.ActorSystem
-
-import akka.testkit.{TestActorRef, ImplicitSender, TestKit}
-import common.Log.LogActor
-import common.Log.LogLevel.Debug
-
+import akka.testkit.{ImplicitSender, TestActorRef, TestKit}
+import common.Log.{AsyncLogger, LogActor}
 import org.scalatest.{MustMatchers, WordSpecLike}
+
 import scala.language.implicitConversions
 
 /**
@@ -17,8 +15,10 @@ class LogActorTest  extends TestKit(ActorSystem("AsyncLogger")) with ImplicitSen
     "print a log msg" in {
       val log = TestActorRef[LogActor]
       val name = log.path.toString.split("/").last
-      for (i <- 1 to 7)
-      log ! Debug(log.getClass, "Debug LogActor")
+//      for (i <- 1 to 7)
+//      log ! Debug(log.getClass, "Debug LogActor")
+
+      AsyncLogger.error(self.getClass, "Error test")
     }
   }
 }
