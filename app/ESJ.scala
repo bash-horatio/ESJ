@@ -1,11 +1,10 @@
 import Boot.Init
 import akka.actor._
 import com.typesafe.config.ConfigFactory
-import common.Async.Logger
-import common.Async.Logger.Debug
 import common.ConfHelper.ConfigHelper
 import common.FileHelper.FileHelper
 import common.FqueueHelper.FqueueHelper
+import common.Log.LogLevel.Debug
 import services.actor.SceneActor.PullFq
 import services.actor._
 
@@ -37,8 +36,8 @@ class Boot extends Actor with ActorLogging {
 
   val name = context.self.path.toString.split("/").last
   def receive = {
-    case Init => Logger.debug(Debug(name, self.getClass, "System booted"))
-
+//    case Init => AsyncLogger.debug(Debug(self.getClass, "System booted"))
+    case Init => println(Debug(self.getClass, "System booted"))
   }
 }
 

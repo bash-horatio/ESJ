@@ -84,4 +84,9 @@ object LogLevel {
   case class Debug(logClass: Class[_], message: Any = "") extends LogEvent {
     override def level = "Debug"
   }
+
+  case class Flash(logClass: Class[_], message: Any = "") extends LogEvent {
+    override def level = "Flash"
+    override def flashFlag = true
+  }
 }
